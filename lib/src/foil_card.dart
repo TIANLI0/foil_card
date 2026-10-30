@@ -291,6 +291,9 @@ class _FoilPainter extends CustomPainter {
       ..setFloat(i++, style.scale)
       ..setFloat(i++, style.seed)
       ..setFloat(i++, maskMode.toDouble())
+      ..setFloat(i++, style.texture.index.toDouble())
+      ..setFloat(i++, style.textureStrength)
+      ..setFloat(i++, style.glare)
       ..setImageSampler(0, art, filterQuality: filterQuality)
       // An unused sampler still has to be bound; the art stands in.
       ..setImageSampler(1, mask ?? art, filterQuality: filterQuality);

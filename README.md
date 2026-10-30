@@ -17,17 +17,41 @@ FoilTilt(
 
 > Status: prototype, not yet published.
 
-## Patterns
+## Finishes
 
-| pattern | what it is |
-|---|---|
-| `sheen` | brushed metal: fine streaks and a soft warm glare |
-| `rainbow` | diffraction stripes fixed to the card; the light slides their colours and a band through the light carries most of the strength |
-| `glitter` | a field of tiny tilted mirrors, each lighting up only when its own tilt lines up with the light |
-| `cosmos` | domain-warped clouds that drift and change colour with the light, plus crisp star flakes |
+`FoilStyle` comes with ready-made finishes modelled on real trading-card
+foils. Where the foil sits on the card is the mask's job (see below); the
+"usually printed on" column is how these finishes appear on real cards.
 
-`FoilStyle` also takes `intensity`, `scale` (pattern density) and `seed`
-(vary the pattern between cards sharing a style — derive it from a card id).
+| finish | what it looks like | usually printed on |
+|---|---|---|
+| `plain` | no foil, only the lamination's glare | — |
+| `reverseHolo` | metallic foil stamped with a repeating motif whose edges catch the light | everything but the art window |
+| `holo` | vertical rainbow pillars sliding sideways with the light, fine scratches and glints | the art window |
+| `cosmos` | drifting galaxy clouds dodged into the art, crisp stars | the art window |
+| `glitter` | dense, bright, multicoloured glitter | the whole card |
+| `crosshatch` | a criss-cross lattice of shimmering lines, each family sliding its own way | the whole card |
+| `iridescent` | a broad metallic rainbow with an iridescent ripple under the light | the whole card |
+| `diagonal` | diagonal rainbow bands in two layers travelling against each other | the whole card |
+| `fullArt` | `diagonal` over finely grooved lines | the whole card |
+| `altArt` | `diagonal` over a whorl of grooves | the whole card |
+| `textured` | slow, broad colour under a strongly embossed cell texture | the whole card |
+| `softFullArt` | a paler, softer `fullArt` | the whole card |
+| `rainbowGlitter` | a pastel rainbow wash thick with glitter | the whole card |
+| `gold` | gold leaf and gold glitter sharing the card, glitter layers sliding against each other | the whole card |
+| `silver` | whites turned to silver foil, brightening back under the light | the background |
+| `sheen` | brushed metal | anywhere |
+| `rainbow` | a single diffraction band following the light | anywhere |
+
+They are combinations of a `FoilPattern` (13 of them) and an optional
+`FoilTexture` (`lines`, `swirl`, `mesh`) etched into the foil, plus
+`intensity`, `scale` (pattern density), `seed` (vary the pattern between
+cards sharing a finish — derive it from a card id), `textureStrength` and
+`glare`. Build your own with the constructor or `copyWith`.
+
+Every blend a finish needs — soft-light, colour-dodge, hard-light, lighten,
+multiply, exclusion — is computed inside the shader from the art's own
+pixels, so none of them costs a layer.
 
 ## Foil masks
 
@@ -46,9 +70,11 @@ whole card first.
 `ValueListenable<Offset>`, card centre `(0, 0)`, corners `(±1, ±1)`), the
 nearest `FoilLight` above it, or its `restLight`.
 
-`FoilTilt` is the ready-made source: press anywhere on the card and that side
-sinks away while the light jumps to the finger; drag to sweep it; release and
-both spring back. The angle comes from *where* the pointer is, not how far it
+`FoilTilt` is the ready-made source: touch anywhere on the card and it turns
+while the light jumps to the pointer; drag to sweep it; release and both
+spring back. With `FoilTiltResponse.lift` (the default) the side under the
+pointer rises toward the viewer, as if the card turned to look at it; with
+`FoilTiltResponse.press` it sinks away, as if pressed. The angle comes from *where* the pointer is, not how far it
 moved, so `FoilTilt` uses a raw `Listener` and never enters the gesture arena:
 it does not compete with taps or scrolling around it.
 
@@ -86,8 +112,10 @@ image assets either.
 
 ## Provenance
 
-Written from scratch. The idea of pointer-driven foil cards is common; no code,
-shader, texture or asset from any other project was used.
+Written from scratch. The visual targets were set by looking at real foil
+cards and at the rendered output of public web demos of foil effects; no
+source code of those demos was read, and no code, shader, texture or asset
+from any other project was used. All textures are procedural.
 
 ## License
 

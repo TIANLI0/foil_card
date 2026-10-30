@@ -140,6 +140,45 @@ void main() {
       expect(published!.value, rest);
     });
 
+    for (final (response, nearer) in [
+      (FoilTiltResponse.lift, true),
+      (FoilTiltResponse.press, false),
+    ]) {
+      testWidgets(
+          '${response.name}: the touched edge comes '
+          '${nearer ? 'toward' : 'away from'} the viewer', (tester) async {
+        const face = Key('face');
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(
+              child: SizedBox(
+                width: 200,
+                height: 280,
+                child: FoilTilt(
+                  response: response,
+                  child: const SizedBox.expand(key: face),
+                ),
+              ),
+            ),
+          ),
+        );
+        final topLeft = tester.getTopLeft(find.byType(FoilTilt));
+        final gesture =
+            await tester.startGesture(topLeft + const Offset(195, 140));
+        await tester.pump();
+
+        // Perspective makes the nearer edge look longer.
+        final box = tester.renderObject<RenderBox>(find.byKey(face));
+        double edge(double x) => (box.localToGlobal(Offset(x, 280)) -
+                box.localToGlobal(Offset(x, 0)))
+            .distance;
+        expect(edge(200) > edge(0), nearer);
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+    }
+
     testWidgets('steps aside when the platform reduces motion', (
       tester,
     ) async {

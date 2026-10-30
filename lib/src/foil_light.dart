@@ -27,10 +27,22 @@ class FoilLight extends InheritedWidget {
       !identical(light, oldWidget.light);
 }
 
-/// Tilts its child toward the finger and moves the foil light with it.
+/// Which way a card turns under the pointer.
+enum FoilTiltResponse {
+  /// The side under the pointer rises toward the viewer, as if the card
+  /// were turned to look at the pointer. Natural for a mouse hovering.
+  lift,
+
+  /// The side under the pointer sinks away, as if pressed. Natural for a
+  /// finger.
+  press,
+}
+
+/// Tilts its child under the pointer and moves the foil light with it.
 ///
-/// Press anywhere on the card: that side sinks away and the light jumps to
-/// the finger; drag to sweep it; let go and both settle back. The angle comes
+/// Touch anywhere on the card: that side turns (see [response]) and the
+/// light jumps to the pointer; drag to sweep it; let go and both settle
+/// back. The angle comes
 /// from *where* the pointer is, not how far it moved, so the gesture needs no
 /// drag recognizer: it never enters the gesture arena and never competes with
 /// taps or scrolling around it. A scroll that starts on the card still
@@ -45,10 +57,13 @@ class FoilTilt extends StatefulWidget {
     this.restLight = const Offset(-0.35, -0.45),
     this.settleDuration = const Duration(milliseconds: 450),
     this.perspective = 0.0012,
+    this.response = FoilTiltResponse.lift,
     super.key,
   });
 
   final Widget child;
+
+  final FoilTiltResponse response;
 
   /// Rotation, in radians, with the finger on an edge.
   final double maxTilt;
@@ -139,16 +154,20 @@ class _FoilTiltState extends State<FoilTilt>
       onPointerCancel: (_) => _release(),
       child: ValueListenableBuilder<Offset>(
         valueListenable: _press,
-        builder: (context, p, child) => Transform(
-          alignment: Alignment.center,
-          // The pressed side recedes: a positive x press turns the right
-          // edge away from the viewer, a positive y press the bottom edge.
-          transform: Matrix4.identity()
-            ..setEntry(3, 2, widget.perspective)
-            ..rotateX(p.dy * widget.maxTilt)
-            ..rotateY(-p.dx * widget.maxTilt),
-          child: child,
-        ),
+        builder: (context, p, child) {
+          // With a press, a positive x turns the right edge away from the
+          // viewer and a positive y the bottom edge; a lift is the mirror.
+          final a = widget.maxTilt *
+              (widget.response == FoilTiltResponse.press ? 1 : -1);
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, widget.perspective)
+              ..rotateX(p.dy * a)
+              ..rotateY(-p.dx * a),
+            child: child,
+          );
+        },
         child: FoilLight(light: _light, child: widget.child),
       ),
     );
