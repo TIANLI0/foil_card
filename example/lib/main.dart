@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:foil_card/foil_card.dart';
 
 import 'demo_art.dart';
+import 'single_image_demo.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +11,8 @@ void main() {
 }
 
 class FoilDemoApp extends StatelessWidget {
-  const FoilDemoApp({super.key});
+  const FoilDemoApp({this.showSingleImage = true, super.key});
+  final bool showSingleImage;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -21,7 +23,15 @@ class FoilDemoApp extends StatelessWidget {
       colorSchemeSeed: const Color(0xFF7C3AED),
       scaffoldBackgroundColor: const Color(0xFF111118),
     ),
-    home: const FoilDemoPage(),
+    home: Builder(
+      builder: (context) => showSingleImage
+          ? SingleImageDemoPage(
+              openLab: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const FoilDemoPage()),
+              ),
+            )
+          : const FoilDemoPage(),
+    ),
   );
 }
 
@@ -72,11 +82,12 @@ class FoilDemoPage extends StatefulWidget {
 
 class _FoilDemoPageState extends State<FoilDemoPage> {
   late final Future<DemoArt> _art = DemoArt.paint();
-  Finish _finish = finishes[2];
+  Finish _finish = finishes[7];
 
   /// Overrides the finish's own placement while set.
   Placement? _placement;
   double _intensity = 1;
+  bool _preview = true;
   FoilTiltResponse _response = FoilTiltResponse.lift;
 
   static const _radius = BorderRadius.all(Radius.circular(18));
@@ -86,6 +97,7 @@ class _FoilDemoPageState extends State<FoilDemoPage> {
         aspectRatio: DemoArt.size.aspectRatio,
         child: FoilTilt(
           response: _response,
+          idleOpacity: _preview ? 1 : 0,
           child: FoilCard(
             image: art.art,
             mask: placement == Placement.whole ? null : art.mask,
@@ -98,6 +110,7 @@ class _FoilDemoPageState extends State<FoilDemoPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('材质实验')),
     body: SafeArea(
       child: FutureBuilder<DemoArt>(
         future: _art,
@@ -109,6 +122,13 @@ class _FoilDemoPageState extends State<FoilDemoPage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
+              Text(
+                'Holographic foil',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 6),
+              const Text('Hover or drag across the card to move the light.'),
+              const SizedBox(height: 20),
               Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 300),
@@ -138,6 +158,15 @@ class _FoilDemoPageState extends State<FoilDemoPage> {
                 ],
               ),
               const SizedBox(height: 12),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Keep foil visible at rest'),
+                subtitle: const Text(
+                  'Turn off to let reflections fade out after a touch',
+                ),
+                value: _preview,
+                onChanged: (v) => setState(() => _preview = v),
+              ),
               SegmentedButton<Placement>(
                 segments: const [
                   ButtonSegment(value: Placement.whole, label: Text('whole')),

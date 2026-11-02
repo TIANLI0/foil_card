@@ -1,11 +1,20 @@
-## 0.0.1
+## 0.1.0
 
-* Prototype: `FoilCard` (one-pass foil shader over card art, optional foil
-  mask), `FoilTilt` (pointer-driven tilt and light), `FoilLight`, and four
-  patterns — sheen, rainbow, glitter, cosmos.
-* Finishes modelled on real trading-card foils: `plain`, `reverseHolo`,
-  `holo`, `cosmos`, `glitter`, `crosshatch`, `iridescent`, `diagonal`,
-  `fullArt`, `altArt`, `textured`, `softFullArt`, `rainbowGlitter`, `gold`,
-  `silver` (9 new `FoilPattern`s, new `FoilTexture`, `textureStrength`,
-  `glare`).
-* `FoilTilt.response`: `lift` (default, pointer side rises) or `press`.
+First public release.
+
+* `FoilCard`: a procedural foil material over any image in one fragment
+  shader pass, with no textures to ship. Any aspect ratio; masks, relief
+  texture and foil region are optional.
+* Finishes: holographic, glossy, satin, glitter, pearl, prism, radial, ripple,
+  confetti, starfield, heartfield, light beams, aurora, cosmos, gold, silver,
+  holo pillars and more, each tunable through `FoilStyle.copyWith`
+  (intensity, scale, seed, glare, opacity, detail protection, texture).
+* `FoilStyle.twinkle` / `twinkleHearts`: flash-card stars or hearts that each
+  glint at their own angle, tuned through `FoilGlitter` (density, size,
+  sharpness, flare, dust, color, hue, iridescence, print, and `frame` to keep
+  them off the face of a portrait).
+* `FoilTilt`: touch and hover tilt with smoothed light, springy return and
+  fade, outside the gesture arena.
+* `FoilMotion`: the light follows the device gyroscope — only the light moves,
+  turns recenter, a still phone costs no frames, and it pauses in the
+  background, in landscape and on hidden routes.

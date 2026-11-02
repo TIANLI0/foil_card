@@ -1,104 +1,137 @@
 # foil_card
 
-Foil trading-card effects for Flutter. The card art and its foil are drawn by
-**one fragment shader in one pass**; the foil reacts to a light you move with
-a finger.
+Holographic foil and flash-card effects for any Flutter image: trading cards,
+membership cards, illustrations, covers and photographs. Give it one complete
+image; it adds a procedural foil material in a single fragment shader pass,
+with no textures to ship and no separate art/text layers.
 
 ```dart
-FoilTilt(
+SizedBox(
+  width: 300,
   child: FoilCard(
-    image: NetworkImage(card.artUrl),
-    mask: NetworkImage(card.foilMaskUrl), // optional: where the foil is
-    style: FoilStyle.glitter,
+    image: AssetImage('assets/card.png'),
+    style: FoilStyle.twinkle,      // silver flash-card stars
+    interactive: true,             // touch / hover tilt
+    motion: const FoilMotion(),    // and the device gyroscope
     borderRadius: BorderRadius.circular(16),
   ),
 )
 ```
 
-> Status: prototype, not yet published.
+- One shader pass that samples the art itself: no backdrop reads, no
+  `saveLayer`, no advanced blend modes, so it stays stable under perspective
+  transforms and costs the same in a grid as on its own.
+- Lit by touch, mouse hover or the gyroscope; nothing animates while idle.
+- Any aspect ratio. With a loose axis the layout follows the image's own ratio
+  once loaded; `aspectRatio` reserves space up front, `fit` controls cropping.
 
 ## Finishes
 
-`FoilStyle` comes with ready-made finishes modelled on real trading-card
-foils. Where the foil sits on the card is the mask's job (see below); the
-"usually printed on" column is how these finishes appear on real cards.
+| Style | Look |
+|---|---|
+| `FoilStyle.holographic` (default) | Rainbow film with a moving reflective band |
+| `FoilStyle.glossy` | Clear lamination without recoloring the artwork |
+| `FoilStyle.satin` | Soft brushed metallic material |
+| `FoilStyle.glitter` | Reflective flakes |
+| `FoilStyle.pearl` | Soft pink/cyan nacre for light artwork |
+| `FoilStyle.prism` | Independently reflecting triangular facets |
+| `FoilStyle.radial` | Optical-disc color fans and concentric grooves |
+| `FoilStyle.ripple` | Wavy contours with traveling reflective crests |
+| `FoilStyle.confetti` | Coarse, scattered diamond foil fragments |
+| `FoilStyle.starfield` | Flat silver star print swept by one reflection band |
+| `FoilStyle.heartfield` | Transparent heart print with a soft cool reflection |
+| `FoilStyle.lightBeams` | Clear film with narrow moving light streaks |
+| `FoilStyle.aurora` | Translucent teal/violet interference ribbons |
+| `FoilStyle.twinkle` | Flash-card silver stars, each glinting at its own angle |
+| `FoilStyle.twinkleHearts` | The same with hearts |
+| `FoilStyle.cosmos` | Colored clouds with fine glitter |
+| `FoilStyle.gold` / `silver` | Warm gold / cool brushed silver |
+| `FoilStyle.holo` | Moving vertical rainbow pillars |
 
-| finish | what it looks like | usually printed on |
-|---|---|---|
-| `plain` | no foil, only the lamination's glare | — |
-| `reverseHolo` | metallic foil stamped with a repeating motif whose edges catch the light | everything but the art window |
-| `holo` | vertical rainbow pillars sliding sideways with the light, fine scratches and glints | the art window |
-| `cosmos` | drifting galaxy clouds dodged into the art, crisp stars | the art window |
-| `glitter` | dense, bright, multicoloured glitter | the whole card |
-| `crosshatch` | a criss-cross lattice of shimmering lines, each family sliding its own way | the whole card |
-| `iridescent` | a broad metallic rainbow with an iridescent ripple under the light | the whole card |
-| `diagonal` | diagonal rainbow bands in two layers travelling against each other | the whole card |
-| `fullArt` | `diagonal` over finely grooved lines | the whole card |
-| `altArt` | `diagonal` over a whorl of grooves | the whole card |
-| `textured` | slow, broad colour under a strongly embossed cell texture | the whole card |
-| `softFullArt` | a paler, softer `fullArt` | the whole card |
-| `rainbowGlitter` | a pastel rainbow wash thick with glitter | the whole card |
-| `gold` | gold leaf and gold glitter sharing the card, glitter layers sliding against each other | the whole card |
-| `silver` | whites turned to silver foil, brightening back under the light | the background |
-| `sheen` | brushed metal | anywhere |
-| `rainbow` | a single diffraction band following the light | anywhere |
+Every preset is a starting point: `FoilStyle.prism.copyWith(scale: 1.3,
+seed: 42)`. `intensity` sets the foil strength and `glare` the separate
+lamination highlight (set both to 0 for the untouched image). `opacity` blends
+the material layer with the art without touching image alpha.
+`detailProtection` (0–1, default .75) holds reflections back at high-contrast
+edges and dark ink, which keeps text on flattened cards readable; it is local
+contrast protection, not text or subject segmentation. `seed` varies a pattern
+between cards that share a style; derive it from a stable card id.
 
-They are combinations of a `FoilPattern` (13 of them) and an optional
-`FoilTexture` (`lines`, `swirl`, `mesh`) etched into the foil, plus
-`intensity`, `scale` (pattern density), `seed` (vary the pattern between
-cards sharing a finish — derive it from a card id), `textureStrength` and
-`glare`. Build your own with the constructor or `copyWith`.
+## Flash-card glitter
 
-Every blend a finish needs — soft-light, colour-dodge, hard-light, lighten,
-multiply, exclusion — is computed inside the shader from the art's own
-pixels, so none of them costs a layer.
+`twinkle` prints motifs (stars or hearts) on a staggered grid. Each motif has
+its own angle, so turning the card hands the glint from one to the next
+instead of sweeping a band over the whole field. Tune it through
+`FoilStyle.glints`:
 
-## Foil masks
+```dart
+FoilStyle.twinkle.copyWith(
+  glints: FoilGlitter.stars.copyWith(density: .6, size: .25),
+)
+```
 
-Real foil cards are not foil all over: often only the frame, or only the
-illustration, is printed on foil. Pass a `mask` image — **white is foil**,
-black or transparent is plain art — stretched over the whole card, so author
-it at the card's aspect ratio. `invertMask: true` swaps the two (a "reverse"
-foil). Without a mask the whole card is foil.
+| `FoilGlitter` | What it does |
+|---|---|
+| `motif` | `star` (four-point, with cross rays) or `heart` |
+| `density` | Share of grid places that carry a motif |
+| `size` | Motif size relative to the grid spacing |
+| `sharpness` | Glint width: low lights many softly, high gives brief flashes |
+| `flare` | Cross rays (stars) or halo (hearts) while lit |
+| `dust` | Fine glitter between the motifs |
+| `color` | 0 silver-white glints; higher adds holographic color |
+| `hue`, `iridescence` | Where that color starts, and how far the angle moves it |
+| `print` | Visibility of the unlit motifs' silver print |
+| `frame` | Keep motifs off the face area of a portrait (upper middle) |
 
-The foil stays off until the mask has loaded, instead of flashing over the
-whole card first.
+The presets are plain silver and keep clear of the face.
 
-## Light
+## Masks and relief
 
-`FoilCard` takes its light from, in order: its `light` parameter (a
-`ValueListenable<Offset>`, card centre `(0, 0)`, corners `(±1, ±1)`), the
-nearest `FoilLight` above it, or its `restLight`.
+`mask` decides where the foil is printed: white is foil, black or transparent
+is plain art (`maskChannel: FoilMaskChannel.alpha` reads alpha instead,
+`invertMask` swaps them). It is stretched over the card, and the foil stays
+off until it has loaded rather than flashing over everything first.
+`foilRegion` limits the foil to a normalized rectangle. `foil` is an optional
+card-aligned texture whose luminance adds a subtle relief.
 
-`FoilTilt` is the ready-made source: touch anywhere on the card and it turns
-while the light jumps to the pointer; drag to sweep it; release and both
-spring back. With `FoilTiltResponse.lift` (the default) the side under the
-pointer rises toward the viewer, as if the card turned to look at it; with
-`FoilTiltResponse.press` it sinks away, as if pressed. The angle comes from *where* the pointer is, not how far it
-moved, so `FoilTilt` uses a raw `Listener` and never enters the gesture arena:
-it does not compete with taps or scrolling around it.
+## Touch
 
-Nothing animates on its own. With no pointer on the card the foil paints once
-and stays put — a grid of foil cards costs nothing while idle. When the
-platform asks to reduce motion, `FoilTilt` steps aside and cards hold their
-resting light.
+`interactive: true` installs a `FoilTilt`: hover and touch tilt the card in
+perspective and move the light, with smoothing, a springy return and a fade
+(`idleOpacity` sets the resting strength). `FoilTiltResponse.lift` raises the
+pointed edge, `press` sinks it. The first pointer owns the interaction; the
+listener stays out of the gesture arena, so scrolling and taps around the card
+keep working. With reduced motion the card stays still. Compose your own with
+`FoilTilt(child: FoilCard(...))`, or drive the light yourself with `light` or
+an enclosing `FoilLight`.
 
-## Why one pass
+Light positions are normalized: `(0, 0)` is the center, `(±1, ±1)` the
+corners. The light comes from `FoilCard.light`, else `FoilLight`, else
+`restLight`.
 
-The usual way to build this effect — on the web, in CSS — stacks several
-full-card layers with `color-dodge` / `overlay` / `soft-light` blend modes and
-filters. Ported to Flutter literally, every one of those layers reads back
-what is already on screen: Impeller has to copy the backdrop for each advanced
-blend, and under a perspective transform that copy can come back blurred or
-over-bright for a frame, so the card flashes when you press it.
+## Device motion
 
-`foil_card` passes the art to the shader as a sampler and computes every blend
-from the art's own pixels. There are no backdrop reads, no `saveLayer` and no
-advanced blend modes: the result is stable under any transform, and costs the
-same in a grid as on its own. Patterns are procedural, so the package ships no
-textures.
+`FoilCard(motion: const FoilMotion())`, or `FoilTilt(motion: ...)`, moves the
+light as the phone is turned. Turning an edge toward the viewer brings the
+light toward it, as a touch with `FoilTiltResponse.lift` does. Only the light
+moves: the card is not tilted on screen, since the screen already turns with
+the device.
 
-Where the shader cannot be loaded, the art is painted plainly.
+The gyroscope gives turn rates, not a pose, so turns are integrated and
+recentered (`recenter`, default 3 s): the light answers each turn, then
+settles, and whatever pose the phone comes to rest in becomes neutral. Rates
+under `deadZone` are ignored and the light stops once it has caught up, so a
+still phone costs no frames. The sensor is read at 30 Hz (`samplingPeriod`)
+and the light is interpolated every frame. `range` (0.3 rad, about 17°) is the
+turn that takes the light to the edge.
+
+The gyroscope is read only while the card is laid out in portrait, the app is
+in the foreground, animations are enabled and the route is visible; a touch
+takes the light over and hands it back on release. Inject `rotationRates` in
+tests.
+
+This uses [sensors_plus](https://pub.dev/packages/sensors_plus). On iOS the
+app's `Info.plist` must contain `NSMotionUsageDescription`.
 
 ## Example
 
@@ -107,15 +140,9 @@ cd example
 flutter run
 ```
 
-The example paints its own demo card and mask at startup, so it carries no
-image assets either.
-
-## Provenance
-
-Written from scratch. The visual targets were set by looking at real foil
-cards and at the rendered output of public web demos of foil effects; no
-source code of those demos was read, and no code, shader, texture or asset
-from any other project was used. All textures are procedural.
+The example opens on single images (portrait illustration, landscape
+membership card, square cover) with every finish and its controls; **材质实验**
+opens a generated card with all presets.
 
 ## License
 

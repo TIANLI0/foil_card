@@ -1,11 +1,11 @@
 name: foil_card
 description: >-
-  Foil trading-card effects for Flutter: rainbow, glitter, cosmos and sheen
-  foils that react to touch, drawn by one fragment shader pass with optional
-  per-card foil masks.
-version: 0.0.1
-publish_to: none # private until the first public release
+  Holographic foil and flash-card effects for any Flutter image: rainbow,
+  glitter, silver and twinkling star / heart finishes in one fragment shader
+  pass, lit by touch or the device gyroscope.
+version: 0.1.0
 repository: https://github.com/TIANLI0/foil_card
+issue_tracker: https://github.com/TIANLI0/foil_card/issues
 
 environment:
   sdk: ^3.6.0
@@ -14,6 +14,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  sensors_plus: ^7.1.1
 
 dev_dependencies:
   flutter_lints: ^6.0.0
@@ -22,9 +23,11 @@ dev_dependencies:
 
 flutter:
   shaders:
-    - shaders/foil_card.frag
+    - shaders/foil_surface.frag
 
 topics:
   - shaders
   - animation
   - ui
+  - effects
+  - card

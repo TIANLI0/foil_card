@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -54,9 +55,13 @@ void main() {
     expect(foilPointAt(const Offset(100, 50), size), Offset.zero);
     expect(foilPointAt(const Offset(0, 100), size), const Offset(-1, 1));
     expect(foilPointAt(const Offset(500, -20), size), const Offset(1, -1));
+    expect(foilPointAt(const Offset(20, 20), Size.zero), Offset.zero);
   });
 
   test('FoilStyle has value equality', () {
+    expect(FoilStyle.heartfield.copyWith(opacity: .6), FoilStyle.heartfield);
+    expect(FoilStyle.heartfield.copyWith(opacity: .2),
+        isNot(FoilStyle.heartfield));
     expect(FoilStyle.glitter, const FoilStyle(pattern: FoilPattern.glitter));
     expect(
       FoilStyle.rainbow.copyWith(seed: 3),
@@ -130,9 +135,11 @@ void main() {
       final gesture = await tester.startGesture(
         topLeft + const Offset(150, 70),
       );
+      await tester.pumpAndSettle();
       expect(published!.value, const Offset(0.5, -0.5));
 
       await gesture.moveTo(topLeft + const Offset(100, 140));
+      await tester.pumpAndSettle();
       expect(published!.value, Offset.zero);
 
       await gesture.up();
@@ -166,7 +173,7 @@ void main() {
         final topLeft = tester.getTopLeft(find.byType(FoilTilt));
         final gesture =
             await tester.startGesture(topLeft + const Offset(195, 140));
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         // Perspective makes the nearer edge look longer.
         final box = tester.renderObject<RenderBox>(find.byKey(face));
@@ -191,5 +198,114 @@ void main() {
       expect(published, isNull);
       expect(find.byType(Listener), findsNothing);
     });
+  });
+
+  testWidgets(
+      'hover reveals, re-entry interrupts fade and exit returns to idle',
+      (tester) async {
+    ValueListenable<Offset>? light;
+    ValueListenable<double>? activity;
+    await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+            child: SizedBox(
+                width: 200,
+                height: 280,
+                child: FoilTilt(child: Builder(builder: (context) {
+                  light = FoilLight.maybeOf(context);
+                  activity = FoilLight.activityOf(context);
+                  return const SizedBox.expand();
+                }))))));
+    expect(activity!.value, 0);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    final rect = tester.getRect(find.byType(FoilTilt));
+    final point = rect.topLeft + const Offset(150, 70);
+    await mouse.moveTo(point);
+    await tester.pumpAndSettle();
+    expect(light!.value.dx, closeTo(.5, .01));
+    expect(activity!.value, 1);
+    await mouse.moveTo(Offset.zero);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(activity!.value, lessThan(1));
+    await mouse.moveTo(point);
+    await tester.pumpAndSettle();
+    expect(activity!.value, 1);
+    await mouse.moveTo(Offset.zero);
+    await tester.pumpAndSettle();
+    expect(activity!.value, 0);
+    await mouse.removePointer();
+  });
+
+  testWidgets('second touch cannot steal or release the first pointer',
+      (tester) async {
+    ValueListenable<Offset>? light;
+    ValueListenable<double>? activity;
+    await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+            child: SizedBox(
+                width: 200,
+                height: 280,
+                child: FoilTilt(child: Builder(builder: (context) {
+                  light = FoilLight.maybeOf(context);
+                  activity = FoilLight.activityOf(context);
+                  return const SizedBox.expand();
+                }))))));
+    final rect = tester.getRect(find.byType(FoilTilt));
+    final first = await tester.startGesture(rect.topLeft + const Offset(50, 70),
+        pointer: 1);
+    await tester.pumpAndSettle();
+    final saved = light!.value;
+    final second = await tester
+        .startGesture(rect.topLeft + const Offset(150, 210), pointer: 2);
+    await second.moveBy(const Offset(-20, 0));
+    await second.up();
+    await tester.pumpAndSettle();
+    expect(light!.value, saved);
+    expect(activity!.value, 1);
+    await first.cancel();
+    await tester.pumpAndSettle();
+    expect(activity!.value, 0);
+  });
+
+  testWidgets(
+      'changing reduced motion mid-touch does not retain pointer ownership',
+      (tester) async {
+    final reduced = ValueNotifier(false);
+    ValueListenable<double>? activity;
+    await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: ValueListenableBuilder<bool>(
+            valueListenable: reduced,
+            builder: (context, value, _) => MediaQuery(
+                data: MediaQueryData(disableAnimations: value),
+                child: Center(
+                    child: SizedBox(
+                        width: 200,
+                        height: 280,
+                        child: FoilTilt(child: Builder(builder: (context) {
+                          activity = FoilLight.activityOf(context);
+                          return const SizedBox.expand();
+                        }))))))));
+    final point = tester.getCenter(find.byType(FoilTilt));
+    final first = await tester.startGesture(point, pointer: 1);
+    await tester.pumpAndSettle();
+    expect(activity!.value, 1);
+    reduced.value = true;
+    await tester.pump();
+    expect(activity, isNull);
+    await first.up();
+    reduced.value = false;
+    await tester.pump();
+    final next = await tester.startGesture(point, pointer: 2);
+    await tester.pumpAndSettle();
+    expect(activity!.value, 1);
+    await next.up();
+    await tester.pumpAndSettle();
+    expect(activity!.value, 0);
+    await tester.pumpWidget(const SizedBox());
+    reduced.dispose();
   });
 }
